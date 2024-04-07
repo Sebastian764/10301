@@ -1,0 +1,25 @@
+error(train): 0.07
+error(test): 0.25773195876288657
+
+
+	if (bmp.format[0] != 'B' || bmp.format[0] != 'M' 
+	|| dib.size != 40 || dib.bitsPerPixel != 24) 
+
+=== BMP Header ===
+Type: BM
+Size: 2073654
+Reserved 1: 0
+Reserved 2: 0
+Image offset: 54
+=== DIB Header ===
+Size: 40 
+Width: 960 
+Height: 720 
+# color planes: 1
+# bits per pixel: 24
+Compression scheme: 0 
+Image size: 2073600 
+Horizontal resolution: 7559 
+Vertical resolution: 7559 
+# colors in palette: 0 
+# important colors: 0 
