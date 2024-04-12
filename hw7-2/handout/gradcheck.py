@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torch.autograd import Function
+from torch.autograd import gradcheck
 import argparse
 from typing import List, Tuple
 import time
@@ -9,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from metrics import evaluate
 from tqdm import tqdm
+
 
 # Initialize the device type based on compute resources being used
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -252,18 +254,7 @@ class RNN(nn.Module):
         :param activation: string of the activation type to use (Tanh, ReLU)
         """
         super(RNN, self).__init__()
-        self.hidden_dim = hidden_dim
-        self.embedding_dim = embedding_dim
-
-        self.W_hx = Linear(embedding_dim, hidden_dim)
-        self.W_hh = Linear(hidden_dim, hidden_dim)
-
-        if activation == 'tanh':
-            self.activation = Tanh()
-        elif activation == 'relu':
-            self.activation = ReLU()
-        else:
-            raise Exception
+        raise NotImplementedError
     
     def forward(self, embeds):
         """
@@ -275,16 +266,8 @@ class RNN(nn.Module):
             outputs: list containing the final hidden states at each sequence length step. Each element has size (batch_size, hidden_dim),
             and has length equal to the sequence length
         """
-        (batch_size, seq_length, embedding_dim) = embeds.shape
-        hidden_states = []
-        h_t = torch.zeros(batch_size, self.hidden_dim).to(device)
-
-        for t in range(seq_length):
-            x_t = embeds[:, t, :]
-            h_t = self.activation(self.W_hx(x_t) + self.W_hh(h_t))
-            hidden_states.append(h_t)
-
-        return hidden_states
+        (batch_size, seq_length, _) = embeds.shape
+        raise NotImplementedError 
 
 
 class TaggingModel(nn.Module):
@@ -302,9 +285,7 @@ class TaggingModel(nn.Module):
         """
 
         super(TaggingModel, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.rnn = RNN(embedding_dim, hidden_dim, activation)
-        self.hidden_to_tag = Linear(hidden_dim, tagset_size)
+        raise NotImplementedError
     
     def forward(self, sentences):
         """
@@ -313,11 +294,7 @@ class TaggingModel(nn.Module):
         :param sentences: batched string sentences of shape (batch_size, seq_length) to be converted to embeddings 
         :return tag_distribution: concatenated results from the hidden to out layers (batch_size, seq_len, tagset_size)
         """
-        embeds = self.embedding(sentences)
-        hidden_states = self.rnn(embeds)
-        tag_scores = [self.hidden_to_tag(h) for h in hidden_states]
-        tag_scores = torch.stack(tag_scores, dim=1)
-        return tag_scores
+        raise NotImplementedError
     
 
 def calc_metrics(true_list, pred_list, tags_dict):
@@ -349,47 +326,8 @@ def train_one_epoch(model, dataloader, loss_fn, optimizer):
     :param loss_fn: loss function to call based on predicted tags (tag_dist) and true label (tags)
     :param optimizer: optimizer to call after loss calculated
     """
-    model.train()
-    total_loss = 0
-    for sentences, tags in dataloader:
-        sentences = sentences.to(device)
-        tags = tags.to(device)
-        optimizer.zero_grad()
-        tag_scores = model(sentences)
-        loss = loss_fn(tag_scores.view(-1, tag_scores.shape[-1]), tags.view(-1))
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item()
-    return total_loss / len(dataloader)
+    raise NotImplementedError
     
-def test(self, X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, float]:
-    """
-    Compute the label and error rate.
-    :param X: input data
-    :param y: label
-    :return:
-        labels: predicted labels
-        error_rate: prediction error rate
-    """
-    num_correct = 0
-    predictions = np.zeros(len(y))
-    for i in range(len(X)):
-        y_hat, J = self.forward(X[i], y[i])
-        y_hat_i = np.argmax(y_hat)
-        predictions[i] = y_hat_i
-        if y[i] == y_hat_i:
-            num_correct += 1 
-    
-    error_rate = 1 - num_correct / len(y)
-    return predictions, error_rate
-
-def accuracy_score(true_labels, pred_labels):
-    correct_predictions = 0
-    for i in range(len(true_labels)):
-        if true_labels[i] == pred_labels[i]:
-            correct_predictions += 1
-    accuracy = correct_predictions / len(true_labels) 
-    return accuracy
 
 def predict_and_evaluate(model, dataloader, tags_dict, loss_fn):
     """
@@ -406,24 +344,9 @@ def predict_and_evaluate(model, dataloader, tags_dict, loss_fn):
         all_preds: list of all predicted tag indices
     """
 
-    model.eval()
-    total_loss = 0
-    all_preds = []
-    all_true = []
     with torch.no_grad():
-        for sentences, tags in dataloader:
-            sentences = sentences.to(device)  # shape: (batch_size, seq_length)
-            tags = tags.to(device)  # shape: (batch_size, seq_length)
-            tag_scores = model(sentences)  # shape: (batch_size, seq_length, tagset_size)
-            loss = loss_fn(tag_scores.view(-1, tag_scores.shape[-1]), tags.view(-1))
-            total_loss += loss.item()
-            preds = torch.argmax(tag_scores, dim=-1)  # shape: (batch_size, seq_length)
-            all_preds.extend(preds.view(-1).tolist())
-            all_true.extend(tags.view(-1).tolist())
-    
-    precision, recall, f1 = calc_metrics(all_true, all_preds, tags_dict)
-    accuracy = accuracy_score(all_true, all_preds)
-    return total_loss / len(dataloader), accuracy, f1, all_preds
+        raise NotImplementedError
+
 
 def train(train_dataloader, test_dataloader, model, optimizer, loss_fn, 
             tags_dict, num_epochs: int):
@@ -448,29 +371,8 @@ def train(train_dataloader, test_dataloader, model, optimizer, loss_fn,
         final_train_preds: list of tags (final train predictions on last epoch)
         final_test_preds: list of tags (final test predictions on last epoch)
     """
-    train_losses = []
-    train_accuracies = []
-    train_f1s = []
-    test_losses = []
-    test_accuracies = []
-    test_f1s = []
+    raise NotImplementedError
 
-    for epoch in range(num_epochs):
-        train_loss = train_one_epoch(model, train_dataloader, loss_fn, optimizer)
-        train_losses.append(train_loss)
-
-        train_loss, train_acc, train_f1, train_preds = predict_and_evaluate(model, train_dataloader, tags_dict, loss_fn)
-        train_accuracies.append(train_acc)
-        train_f1s.append(train_f1)
-
-        test_loss, test_acc, test_f1, test_preds = predict_and_evaluate(model, test_dataloader, tags_dict, loss_fn)
-        test_losses.append(test_loss)
-        test_accuracies.append(test_acc)
-        test_f1s.append(test_f1)
-
-        print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Train F1: {train_f1:.4f}, Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}, Test F1: {test_f1:.4f}")
-
-    return train_losses, train_accuracies, train_f1s, test_losses, test_accuracies, test_f1s, train_preds, test_preds
 
 def main(train_input: str, test_input: str, embedding_dim: int, 
          hidden_dim: int,  num_epochs: int, activation: str):
@@ -495,68 +397,24 @@ def main(train_input: str, test_input: str, embedding_dim: int,
         train_predictions: final predicted labels from the train dataset
         test_predictions: final predicted labels from the test dataset
     """
-    word_to_idx = {}
-    tag_to_idx = {}
-    idx_to_tag = {}
-
-    train_dataset = TextDataset(train_input, word_to_idx, tag_to_idx, idx_to_tag)
-    test_dataset = TextDataset(test_input, word_to_idx, tag_to_idx, idx_to_tag)
-
-    train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=False)
-    test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
-
-    vocab_size = len(word_to_idx)
-    tagset_size = len(tag_to_idx)
-
-    model = TaggingModel(vocab_size, tagset_size, embedding_dim, hidden_dim, activation).to(device)
-    optimizer = torch.optim.Adam(model.parameters())
-    loss_fn = nn.CrossEntropyLoss()
-
-    train_losses, train_accuracies, train_f1s, test_losses, test_accuracies, test_f1s, train_predictions, test_predictions = train(
-        train_dataloader, test_dataloader, model, optimizer, loss_fn, idx_to_tag, num_epochs
-    )
-
-    return train_losses, train_accuracies, train_f1s, test_losses, test_accuracies, test_f1s, train_predictions, test_predictions
+    raise NotImplementedError
 
 
 if __name__ == '__main__':
-    # DO NOT MODIFY THIS ARGPARSE CODE
-    # This takes care of command line argument parsing for you!
-    # To access a specific argument, simply access args.<argument name>.
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--embedding_dim', type=int, help='size of the embedding vector')
-    parser.add_argument('--hidden_dim', type=int, help='size of the hidden layer')
-    parser.add_argument('--num_epochs', type=int, help='number of epochs')
-    parser.add_argument('--activation', type=str, choices=["tanh", "relu"], help='activation layer to use')
-    parser.add_argument('train_input', type=str, help='path to training input .txt file')
-    parser.add_argument('test_input', type=str, help='path to testing input .txt file')
-    parser.add_argument('train_out', type=str, help='path to .txt file to write training predictions to')
-    parser.add_argument('test_out', type=str, help='path to .txt file to write testing predictions to')
-    parser.add_argument('metrics_out', type=str, help='path to .txt file to write metrics to')
-        
-    args = parser.parse_args()
-    # Call the main function
-    train_losses, train_accuracies, train_f1s, test_losses, test_accuracies, test_f1s, train_predictions, test_predictions = main(
-        args.train_input, args.test_input, args.embedding_dim, 
-        args.hidden_dim, args.num_epochs, args.activation
-    )
+    input = torch.randn(20, 20, dtype=torch.double, requires_grad=True)
 
-    with open(args.train_out, 'w') as f:
-        for pred in train_predictions:
-            f.write(str(int(pred)) + '\n')
-    with open(args.test_out, 'w') as f:
-        for pred in test_predictions:
-            f.write(str(int(pred)) + '\n')
 
-    train_acc_out = train_accuracies[-1]
-    train_f1_out = train_f1s[-1]
-    test_acc_out = test_accuracies[-1]
-    test_f1_out = test_f1s[-1]
+    test_tanh = gradcheck(TanhFunction.apply, (input,), eps=1e-6, atol=1e-4)
+    assert(test_tanh)
+    print("Tanh gradcheck passed")
 
-    with open(args.metrics_out, 'w') as f:
-        f.write('accuracy(train): ' + str(round(train_acc_out, 6)) + '\n')
-        f.write('accuracy(test): ' + str(round(test_acc_out, 6)) + '\n')
-        f.write('f1(train): ' + str(round(train_f1_out, 6)) + '\n')
-        f.write('f1(test): ' + str(round(test_f1_out, 6)))
+    test_relu = gradcheck(ReLUFunction.apply, (input,), eps=1e-6, atol=1e-4)
+    assert(test_relu)
+    print("ReLU gradcheck passed")
 
-# python3 rnn.py data/en.train_10.twocol.oov data/en.val_10.twocol.oov train_out.txt val_out.txt metrics_out.txt --activation="relu" --embedding_dim=50 --hidden_dim=50 --num_epochs=10 
+    input_tensor = torch.randn(2, 3, dtype=torch.double, requires_grad=True) # Example input (batch_size, in_features)
+    weight = torch.randn(4, 3, dtype=torch.double, requires_grad=True) # Example weight (out_features, in_features)
+    bias = torch.randn(4, dtype=torch.double, requires_grad=True) # Example bias (out_features)
+    test_lin = gradcheck(LinearFunction.apply, (input_tensor, weight, bias), eps=1e-6, atol=1e-4)
+    assert(test_lin)
+    print("Linear gradcheck passed")
